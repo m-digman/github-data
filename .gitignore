@@ -10,6 +10,7 @@ __pycache__/
 .vscode
 *.code-workspace
 data/
+github_config.yaml
 
 # Distribution / packaging
 .Python

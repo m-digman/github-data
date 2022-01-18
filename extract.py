@@ -180,7 +180,7 @@ def extract_repository_data(repository: Repository, data_rows):
 
         # Reduce number of api calls due to rate limiting
         topics, branches_count, protections = "", "", ""
-        sonar_cloud, workflows, dora_metrics = "", "", ""
+        sonar_cloud, workflows, workflow_run = "", "", ""
         if not repository.archived:
             topics = ",".join(repository.get_topics())
             branches_count = repository.get_branches().totalCount
@@ -189,9 +189,9 @@ def extract_repository_data(repository: Repository, data_rows):
             sonar_cloud = contains_string(protections, "sonarcloud")
 
             workflows = get_workflows(repository)
-            workflow_rum = contains_string(workflows, gh_config.workflow_name)
+            workflow_run = contains_string(workflows, gh_config.workflow_name)
 
-        data_rows.append([repository.name, repo_type, topics, sonar_cloud, workflow_rum, repository.created_at, last_commit_date, days_between_last_commit_creation,
+        data_rows.append([repository.name, repo_type, topics, sonar_cloud, workflow_run, repository.created_at, last_commit_date, days_between_last_commit_creation,
                           creator, workflows, branches_count, repository.default_branch, repository.delete_branch_on_merge, protections, contrib_count, contributers])
 
 
