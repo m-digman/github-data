@@ -1,0 +1,5 @@
+- github:
+    token: ghp_token
+    owner: my-org
+    repositories: some-repo, other-repo
+    workflow: GitHub Workflow Name
