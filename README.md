@@ -41,6 +41,7 @@ Extracts information about all repositories for the owner specified in github_co
 - Topics
 - SonarCloud (branch protection)
 - Workflow (is configured)
+- Dependabot (alerts configured)
 - Created (date)
 - Last Commit (date)
 - Diff (days)
@@ -48,6 +49,7 @@ Extracts information about all repositories for the owner specified in github_co
 - Workflows (configured)
 - Branches
 - Default (branch)
+- Merge Button (allowed rules)
 - Auto Delete Branch
 - Protections (branch)
 - No. Contributers

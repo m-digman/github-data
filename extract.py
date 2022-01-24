@@ -1,3 +1,4 @@
+import re
 from github import Github, GithubException
 from github.Repository import Repository
 from github_config import github_config
@@ -7,7 +8,7 @@ import csv
 
 gh_config = github_config()
 
-csv_column = ["Name", "Type", "Topics", "SonarCloud", "Workflow", "Created", "Last Commit", "Diff (days)", "Admin/Creator", "Workflows", "Branches", "Default", "Auto Delete Branch", "Protections", "No. Contributers", "Contributers"]
+csv_column = ["Name", "Type", "Topics", "SonarCloud", "Workflow", "Dependabot", "Created", "Last Commit", "Diff (days)", "Admin/Creator", "Workflows", "Branches", "Default", "Merge Button", "Auto Delete Branch", "Protections", "No. Contributers", "Contributers"]
 
 users_cache = {}
 
@@ -140,6 +141,19 @@ def get_workflows(repository: Repository):
     return workflows
 
 
+def get_merge_button_rules(repository: Repository):
+    merge_button = ""
+
+    if repository.allow_merge_commit:
+        merge_button = "[Merge]"
+    if repository.allow_rebase_merge:
+        merge_button = merge_button + "[Rebase]"
+    if repository.allow_squash_merge:
+        merge_button = merge_button + "[Squash]"
+
+    return merge_button
+
+
 def contains_string(string, find_string):
     if find_string in string:
         return "Yes"
@@ -191,8 +205,11 @@ def extract_repository_data(repository: Repository, data_rows):
             workflows = get_workflows(repository)
             workflow_run = contains_string(workflows, gh_config.workflow_name)
 
-        data_rows.append([repository.name, repo_type, topics, sonar_cloud, workflow_run, repository.created_at, last_commit_date, days_between_last_commit_creation,
-                          creator, workflows, branches_count, repository.default_branch, repository.delete_branch_on_merge, protections, contrib_count, contributers])
+        dependabot = repository.get_vulnerability_alert()
+        merge_button = get_merge_button_rules(repository)
+
+        data_rows.append([repository.name, repo_type, topics, sonar_cloud, workflow_run, dependabot, repository.created_at, last_commit_date, days_between_last_commit_creation,
+                          creator, workflows, branches_count, repository.default_branch, merge_button, repository.delete_branch_on_merge, protections, contrib_count, contributers])
 
 
 def main():

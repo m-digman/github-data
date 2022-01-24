@@ -40,7 +40,7 @@ gql_query = """
                             severity
                             vulnerableVersionRange
                         }
-                        vulnerableManifestFilename
+                        vulnerableManifestPath
                         vulnerableRequirements
                     }
                 }
@@ -68,34 +68,54 @@ def create_csv(rows):
     print("Extracted {0} vulnerabilities to \"{1}\"".format(len(rows), filename))
 
 
+def get_version_int(version_string):
+    # "0-20180910192245-6acdf747ae99"
+    index = version_string.find("-")
+    if index == -1:
+        return int(version_string)
+    else:
+        return int(version_string[0:index])
+
+
+def get_semantic_versions(version):
+    versions = version.split(".")
+    return get_version_int(versions[0]), get_version_int(versions[1]), get_version_int(versions[2])
+
+
+def get_upgrade_status(current_version, patched_version):
+    if current_version and patched_version:
+        current_major, current_minor, current_patch = get_semantic_versions(current_version)
+        patched_major, patched_minor, patched_patch = get_semantic_versions(patched_version)
+
+        if patched_major > current_major:
+            return "Major", patched_major - current_major
+        elif patched_major == current_major and patched_minor > current_minor:
+            return "Minor", patched_minor - current_minor
+        elif patched_major == current_major and patched_minor == current_minor and patched_patch > current_patch:
+            return "Patch", patched_patch - current_patch
+
+    return "", ""
+
+
+def strip_semantic_version(version_string):
+    # "= 1.2.3" or "= v1.2.3" or "= v0.0.0-20180910192245-6acdf747ae99"
+    if version_string:
+        if "v" in version_string:
+            version_string = version_string.replace("v", "")
+
+        if version_string.startswith("="):
+            return version_string.replace("= ", "")
+
+    return version_string
+
+
 def get_date_from_utc_string(date_string):
     if date_string:
         # 2021-07-20T14:54:42Z
         return datetime.strptime(date_string, "%Y-%m-%dT%H:%M:%SZ").date()
 
 
-def get_semantic_versions(version):
-    versions = version.split(".")
-    return versions[0], versions[1], versions[2]
-
-
-def _get_upgrade_status(current_version, patched_version):
-    if current_version and patched_version:
-        current_version = current_version.replace("= ", "")
-        current_major, current_minor, current_patch = get_semantic_versions(current_version)
-        patched_major, patched_minor, patched_patch = get_semantic_versions(patched_version)
-
-        if patched_major > current_major:
-            return "Major", int(patched_major) - int(current_major)
-        elif patched_major == current_major and patched_minor > current_minor:
-            return "Minor", int(patched_minor) - int(current_minor)
-        elif patched_major == current_major and patched_minor == current_minor and patched_patch > current_patch:
-            return "Patch", int(patched_patch) - int(current_patch)
-        else:
-            return ""
-
-
-def extract_data(repo_name, data_node, data_rows):
+def extract_data(repo_name, data_node):
     severity = data_node["securityVulnerability"]["severity"]
     cvss_score = data_node["securityVulnerability"]["advisory"]["cvss"]["score"]
     summary = data_node["securityVulnerability"]["advisory"]["summary"]
@@ -107,8 +127,8 @@ def extract_data(repo_name, data_node, data_rows):
     if fix:
         patched_version = fix["identifier"]
     affected_version = data_node["securityVulnerability"]["vulnerableVersionRange"]
-    current_version = data_node["vulnerableRequirements"]
-    manifest = data_node["vulnerableManifestFilename"]
+    current_version = strip_semantic_version(data_node["vulnerableRequirements"])
+    manifest = data_node["vulnerableManifestPath"]
     dismiss_reason = data_node["dismissReason"]
     dismisser, date_closed = "", ""
     status = "Open"
@@ -117,7 +137,7 @@ def extract_data(repo_name, data_node, data_rows):
         dismisser = "{0} ({1})".format(data_node["dismisser"]["name"], data_node["dismisser"]["login"])
         date_closed = get_date_from_utc_string(data_node["dismissedAt"])
 
-    upgrade_type, upgrade_difference = _get_upgrade_status(current_version, patched_version)
+    upgrade_type, upgrade_difference = get_upgrade_status(current_version, patched_version)
 
     return [repo_name, dependency, manifest, status, severity, cvss_score, summary, upgrade_type, upgrade_difference, affected_version, patched_version, current_version,
             date_published, link, dismisser, dismiss_reason, date_closed]
@@ -140,7 +160,7 @@ def main():
         data = get_repo_vulnerabilities(repo_name)
 
         for node in data["repository"]["vulnerabilityAlerts"]["nodes"]:
-            vulnerability = extract_data(repo_name, node, csv_rows)
+            vulnerability = extract_data(repo_name, node)
             csv_rows.append(vulnerability)
 
     create_csv(csv_rows)
