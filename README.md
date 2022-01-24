@@ -68,6 +68,8 @@ Extracts security vulnerabilities identified by GitHub Dependabot via the GitHub
 - Severity
 - CVSS (score)
 - Summary
+- Upgrade (type: Major, Minor, Patch)
+- Diff (in version)
 - Affected Versions
 - Patched Version
 - Current Version
