@@ -31,7 +31,7 @@ Identifies the owner of the repositories that you want to extract data on, this 
 ### Repositories
 List of repositories that you want to extract security vulnerability data for. These must have the same owner defined in the config above. Used in audit.py only.
 ### Workflow
-You can choose to see if each repository reported on by extract.py has a specific GitHub workflow configured. This is the name of any GitHub workflow yml file found in ".github/workflows". Used in extract.py only.  
+You can choose to see if each repository reported on by extract.py has a specific GitHub workflow configured. This is the name of any GitHub workflow yml file found in ".github/workflows". Used in extract.py only and is not mandatory.
 
 # Scripts
 ## extract.py

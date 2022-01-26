@@ -1,16 +1,21 @@
-import re
 from github import Github, GithubException
 from github.Repository import Repository
 from github_config import github_config
 from datetime import datetime
+from enum import Enum, auto
 import os
 import csv
 
 gh_config = github_config()
 
-csv_column = ["Name", "Type", "Topics", "SonarCloud", "Workflow", "Dependabot", "Created", "Last Commit", "Diff (days)", "Admin/Creator", "Workflows", "Branches", "Default", "Merge Button", "Auto Delete Branch", "Protections", "No. Contributers", "Contributers"]
+csv_repo_columns = ["Name", "Type", "Topics", "SonarCloud", "Workflow", "Dependabot", "Created", "Last Commit", "Diff (days)", "Admin/Creator", "Workflows", "Branches", "Default", "Merge Button", "Auto Delete Branch", "Protections", "No. Contributers", "Contributers"]
+csv_branch_columns = ["Repository", "Branch", "Is Default", "Last Commit", "By"]
 
 users_cache = {}
+
+class Columns(Enum):
+    REPOS = auto()
+    BRANCHES = auto()
 
 
 def create_folder(path):
@@ -18,15 +23,19 @@ def create_folder(path):
         os.makedirs(path)
 
 
-def create_csv(rows):
+def create_csv(rows, column_type):
     today = datetime.now()
     path = ".//data//"
     create_folder(path)
 
-    filename = "{0}//private-repos-{1:%Y-%m-%d}.csv".format(path, today)
+    csv_columns = csv_repo_columns
+    if Columns.BRANCHES == column_type:
+        csv_columns = csv_branch_columns
+
+    filename = "{0}//private-{1}}-{2:%Y-%m-%d}.csv".format(path, column_type.name.lower(), today)
     with open(filename, 'w', newline='', encoding='utf-8') as file:
         writer = csv.writer(file)
-        writer.writerow(csv_column)
+        writer.writerow(csv_columns)
         writer.writerows(rows)
 
     print("Extracted {0} repositories to \"{1}\"".format(len(rows), filename))
@@ -155,13 +164,13 @@ def get_merge_button_rules(repository: Repository):
 
 
 def contains_string(string, find_string):
-    if find_string in string:
+    if len(find_string) > 0 and find_string in string:
         return "Yes"
     
     return ""
 
 
-def extract_repository_data(repository: Repository, data_rows):
+def extract_repository_data(repository: Repository, repo_data, branch_data):
     repo_type = "Private"
     if not repository.private:
         repo_type = "Public"
@@ -197,7 +206,12 @@ def extract_repository_data(repository: Repository, data_rows):
         sonar_cloud, workflows, workflow_run = "", "", ""
         if not repository.archived:
             topics = ",".join(repository.get_topics())
-            branches_count = repository.get_branches().totalCount
+
+            branches = repository.get_branches()
+            branches_count = branches.totalCount
+            for branch in branches:
+                is_default = repository.default_branch == branch.name
+                branch_data.append([repository.name, branch.name, is_default, branch.commit.commit.committer.date, branch.commit.commit.committer.name])
 
             protections = get_default_branch_protections(repository)
             sonar_cloud = contains_string(protections, "sonarcloud")
@@ -208,18 +222,20 @@ def extract_repository_data(repository: Repository, data_rows):
         dependabot = repository.get_vulnerability_alert()
         merge_button = get_merge_button_rules(repository)
 
-        data_rows.append([repository.name, repo_type, topics, sonar_cloud, workflow_run, dependabot, repository.created_at, last_commit_date, days_between_last_commit_creation,
+        repo_data.append([repository.name, repo_type, topics, sonar_cloud, workflow_run, dependabot, repository.created_at, last_commit_date, days_between_last_commit_creation,
                           creator, workflows, branches_count, repository.default_branch, merge_button, repository.delete_branch_on_merge, protections, contrib_count, contributers])
 
 
 def main():
-    csv_rows = []
+    csv_repo_rows = []
+    csv_branch_rows = []
 
     g = Github(gh_config.access_token)
     for repo in g.get_organization(gh_config.owner).get_repos():
-        extract_repository_data(repo, csv_rows)
+        extract_repository_data(repo, csv_repo_rows, csv_branch_rows)
 
-    create_csv(csv_rows)
+    create_csv(csv_repo_rows, Columns.REPOS)
+    create_csv(csv_branch_rows, Columns.BRANCHES)
 
 
 if __name__ == "__main__":

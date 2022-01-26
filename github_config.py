@@ -2,6 +2,7 @@ import yaml
 
 class github_config(object):
     __github_config_file = "github_config.yaml"
+    __workflow_name = ""
 
 
     def __init__(self, config_file = None):
@@ -13,10 +14,12 @@ class github_config(object):
     def __load_config(self):
         with open(self.__github_config_file, "r") as config_file:
             config = yaml.safe_load(config_file)
-            self.__access_token = config[0]["github"]["token"]
-            self.__owner = config[0]["github"]["owner"]
-            self.__repositories = config[0]["github"]["repositories"].replace(" ", "").split(",")
-            self.__workflow_name = config[0]["github"]["workflow"]
+            github_values = config[0]["github"]
+            self.__access_token = github_values["token"]
+            self.__owner = github_values["owner"]
+            self.__repositories = github_values["repositories"].replace(" ", "").split(",")
+            if len (github_values) > 3:
+                self.__workflow_name = github_values["workflow"]
 
 
     @property

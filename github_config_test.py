@@ -25,9 +25,9 @@ class github_config_test(unittest.TestCase):
         self.assertEqual(actual[1], "another-repo")
 
 
-    def test_workflow_name_returned(self):
+    def test_workflow_name_not_mandatory(self):
         actual = self.config.workflow_name
-        self.assertEqual(actual, "My GitHub Workflow")
+        self.assertEqual(actual, "")
 
 
 if __name__ == '__main__':
