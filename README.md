@@ -35,7 +35,7 @@ You can choose to see if each repository reported on by extract.py has a specifi
 
 # Scripts
 ## extract.py
-Extracts information about all repositories for the owner specified in github_config.yaml via the GitHub Rest API. This script generates a .CSV file with the following columns:
+Extracts information about all repositories and branches for the owner specified in github_config.yaml via the GitHub Rest API. This script generates two .CSV files, one starting "private-repos-" with the following columns:
 - Name
 - Type
 - Topics
@@ -47,13 +47,21 @@ Extracts information about all repositories for the owner specified in github_co
 - Diff (days)
 - Admin/Creator
 - Workflows (configured)
-- Branches
+- Branches (count)
 - Default (branch)
 - Merge Button (allowed rules)
 - Auto Delete Branch
 - Protections (branch)
 - No. Contributers
 - Contributers
+
+The second .CSV file containing the branch data, starts with "private-branches-" and has the following columns:
+- Repository (name)
+- Branch (name)
+- Is Default (branch)
+- Last Commit (date)
+- By (committer)
+
 ### Usage
 ```python
 py extract.py
@@ -78,6 +86,9 @@ Extracts security vulnerabilities identified by GitHub Dependabot via the GitHub
 - Dismisser
 - Reason
 - Closed (date)
+By specifing a list of repositories
+
+
 ### Usage
 ```python
 py audit.py

@@ -163,7 +163,8 @@ def main():
             vulnerability = extract_data(repo_name, node)
             csv_rows.append(vulnerability)
 
-    create_csv(csv_rows)
+    if len(csv_rows) > 0:
+        create_csv(csv_rows)
 
 
 if __name__ == "__main__":

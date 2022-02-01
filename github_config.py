@@ -2,6 +2,7 @@ import yaml
 
 class github_config(object):
     __github_config_file = "github_config.yaml"
+    __repositories = {}
     __workflow_name = ""
 
 
@@ -17,7 +18,8 @@ class github_config(object):
             github_values = config[0]["github"]
             self.__access_token = github_values["token"]
             self.__owner = github_values["owner"]
-            self.__repositories = github_values["repositories"].replace(" ", "").split(",")
+            if len (github_values) > 2:
+                self.__repositories = github_values["repositories"].replace(" ", "").split(",")
             if len (github_values) > 3:
                 self.__workflow_name = github_values["workflow"]
 
