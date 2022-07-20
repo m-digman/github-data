@@ -11,6 +11,8 @@ gh_config = github_config()
 csv_repo_columns = ["Name", "Type", "Topics", "SonarCloud", "Workflow", "Dependabot", "Created", "Last Commit", "Diff (days)", "Admin/Creator", "Workflows", "Branches", "Default", "Merge Button", "Auto Delete Branch", "Protections", "No. Contributers", "Contributers"]
 csv_branch_columns = ["Repository", "Branch", "Is Default", "Last Commit", "By"]
 
+LOG_VALUES = "{0} ({1})"
+
 users_cache = {}
 
 class Columns(Enum):
@@ -32,13 +34,13 @@ def create_csv(rows, column_type):
     if Columns.BRANCHES == column_type:
         csv_columns = csv_branch_columns
 
-    filename = "{0}//private-{1}}-{2:%Y-%m-%d}.csv".format(path, column_type.name.lower(), today)
+    filename = "{0}//private-{1}-{2:%Y-%m-%d}.csv".format(path, column_type.name.lower(), today)
     with open(filename, 'w', newline='', encoding='utf-8') as file:
         writer = csv.writer(file)
         writer.writerow(csv_columns)
         writer.writerows(rows)
 
-    print("Extracted {0} repositories to \"{1}\"".format(len(rows), filename))
+    print("Extracted {0} {1} to \"{2}\"".format(len(rows), column_type.name.lower(), filename))
 
 
 def get_user_details(user_login):
@@ -52,7 +54,7 @@ def get_user_details(user_login):
     if user.name == None:
         user_details = user_login
     else:
-        user_details = "{0} ({1})".format(user_login, user.name.strip())
+        user_details = LOG_VALUES.format(user_login, user.name.strip())
 
     # Cache users to reduce api calls
     users_cache[user_login] = user_details
@@ -106,7 +108,7 @@ def get_commit_authors_since_created(repository: Repository):
                 if len(contributors) > 0:
                     contributors = "{0}, {1} ({2})".format(contributors, email, author)
                 else:
-                    contributors = "{0} ({1})".format(email, author)
+                    contributors = LOG_VALUES.format(email, author)
     except GithubException as error:
         print(error)
 
@@ -170,7 +172,7 @@ def contains_string(string, find_string):
     return ""
 
 
-def extract_repository_data(repository: Repository, repo_data, branch_data):
+def get_repo_type(repository: Repository):
     repo_type = "Private"
     if not repository.private:
         repo_type = "Public"
@@ -178,7 +180,13 @@ def extract_repository_data(repository: Repository, repo_data, branch_data):
         repo_type += " archived"
     if repository.raw_data["is_template"]:
         repo_type += " (template)"
-    print("{0} ({1})".format(repository.full_name, repo_type))
+
+    return repo_type
+
+
+def extract_repository_data(repository: Repository, repo_data, branch_data):
+    repo_type = get_repo_type(repository)
+    print(LOG_VALUES.format(repository.full_name, repo_type))
 
     if repository.private:
         contrib_count = 0
@@ -230,8 +238,8 @@ def main():
     csv_repo_rows = []
     csv_branch_rows = []
 
-    g = Github(gh_config.access_token)
-    for repo in g.get_organization(gh_config.owner).get_repos():
+    gh = Github(gh_config.access_token)
+    for repo in gh.get_organization(gh_config.owner).get_repos():
         extract_repository_data(repo, csv_repo_rows, csv_branch_rows)
 
     create_csv(csv_repo_rows, Columns.REPOS)

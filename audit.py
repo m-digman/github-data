@@ -7,13 +7,16 @@ import csv
 
 gh_config = github_config()
 
-csv_column = ["Repository", "Dependency", "From", "Status", "Severity", "CVSS", "Summary", "Upgrade", "Diff", "Affected Versions", "Patched Version", "Current Version", "Published", "Link", "Dismisser", "Reason", "Closed"]
+csv_column = ["Repository", "Language", "Dependency", "From", "Status", "Severity", "CVSS", "Summary", "Upgrade", "Diff", "Affected Versions", "Patched Version", "Current Version", "Published", "Link", "Dismisser", "Reason", "Closed"]
 
 gql_query = """
         query MyQuery ($repository: String!, $owner: String!) {
             repository(name: $repository, owner: $owner) {
                 id
                 name
+                primaryLanguage {
+                    name
+                }
                 vulnerabilityAlerts(first: 50) {
                     nodes {
                         dismissedAt
@@ -115,10 +118,10 @@ def get_date_from_utc_string(date_string):
         return datetime.strptime(date_string, "%Y-%m-%dT%H:%M:%SZ").date()
 
 
-def extract_data(repo_name, data_node):
+def extract_data(repo_name, language, data_node):
     severity = data_node["securityVulnerability"]["severity"]
     cvss_score = data_node["securityVulnerability"]["advisory"]["cvss"]["score"]
-    summary = data_node["securityVulnerability"]["advisory"]["summary"]
+    summary = data_node["securityVulnerability"]["advisory"]["summary"].strip()
     link = data_node["securityVulnerability"]["advisory"]["permalink"]
     date_published = get_date_from_utc_string(data_node["securityVulnerability"]["advisory"]["publishedAt"])
     dependency = data_node["securityVulnerability"]["package"]["name"]
@@ -139,8 +142,8 @@ def extract_data(repo_name, data_node):
 
     upgrade_type, upgrade_difference = get_upgrade_status(current_version, patched_version)
 
-    return [repo_name, dependency, manifest, status, severity, cvss_score, summary, upgrade_type, upgrade_difference, affected_version, patched_version, current_version,
-            date_published, link, dismisser, dismiss_reason, date_closed]
+    return [repo_name, language, dependency, manifest, status, severity, cvss_score, summary, upgrade_type, upgrade_difference,
+            affected_version, patched_version, current_version, date_published, link, dismisser, dismiss_reason, date_closed]
 
 
 def get_repo_vulnerabilities(repository):
@@ -157,10 +160,13 @@ def main():
     csv_rows = []
 
     for repo_name in gh_config.repositories:
+        print("Processing \"{0}\" ...".format(repo_name))
+
         data = get_repo_vulnerabilities(repo_name)
+        language = data["repository"]["primaryLanguage"]["name"]
 
         for node in data["repository"]["vulnerabilityAlerts"]["nodes"]:
-            vulnerability = extract_data(repo_name, node)
+            vulnerability = extract_data(repo_name, language, node)
             csv_rows.append(vulnerability)
 
     if len(csv_rows) > 0:
